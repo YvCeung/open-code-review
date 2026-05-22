@@ -4,6 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const http = require("http");
 const https = require("https");
 const { spawnSync } = require("child_process");
 
@@ -23,8 +24,7 @@ const stateDir = path.join(os.homedir(), ".open-code-review");
 const tsFile = path.join(stateDir, "last-update-check");
 const lockFile = path.join(stateDir, "update.lock");
 
-const GITHUB_API_URL =
-  "https://api.github.com/repos/alibaba/open-code-review/releases/latest";
+const DEFAULT_REGISTRY = "https://registry.npmjs.org";
 
 function touchTimestamp() {
   fs.mkdirSync(stateDir, { recursive: true });
@@ -78,17 +78,21 @@ function getInstalledVersion() {
   }
 }
 
-function fetchLatestVersion() {
+function fetchLatestVersion(pkg) {
+  const registry = (pkg.publishConfig && pkg.publishConfig.registry) || DEFAULT_REGISTRY;
+  const pkgName = pkg.name;
+  if (!pkgName) return Promise.resolve(null);
+  const encodedName = pkgName.replace(/\//g, "%2F");
+  const url = `${registry.replace(/\/$/, "")}/${encodedName}/latest`;
+  const client = url.startsWith("https") ? https : http;
+
   return new Promise((resolve) => {
     const options = {
-      headers: {
-        "User-Agent": "ocr-updater",
-        Accept: "application/vnd.github.v3+json",
-      },
+      headers: { "User-Agent": "ocr-updater", Accept: "application/json" },
       timeout: 15000,
     };
-    const req = https
-      .get(GITHUB_API_URL, options, (res) => {
+    const req = client
+      .get(url, options, (res) => {
         if (res.statusCode !== 200) {
           res.resume();
           resolve(null);
@@ -99,9 +103,7 @@ function fetchLatestVersion() {
         res.on("end", () => {
           try {
             const json = JSON.parse(data);
-            const tag = json.tag_name || "";
-            const version = tag.startsWith("v") ? tag.slice(1) : tag;
-            resolve(version || null);
+            resolve(json.version || null);
           } catch (_) {
             resolve(null);
           }
@@ -148,13 +150,13 @@ async function main() {
     const installedVersion = getInstalledVersion();
     if (!installedVersion) return;
 
-    const latestVersion = await fetchLatestVersion();
+    const pkg = loadPackageJson();
+    const latestVersion = await fetchLatestVersion(pkg);
     if (!latestVersion) return;
 
     if (!semverGt(latestVersion, installedVersion)) return;
 
     const { os: platform, arch } = detectPlatform();
-    const pkg = loadPackageJson();
     const config = pkg.ocrConfig;
 
     const vars = { version: latestVersion, os: platform, arch };
