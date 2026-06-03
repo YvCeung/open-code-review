@@ -17,7 +17,9 @@ func getTracer() trace.Tracer {
 // StartSpan creates a new span from the given context. When telemetry is not enabled,
 // it returns a no-op span so callers can safely defer .End().
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	if !IsEnabled() { return ctx, trace.SpanFromContext(ctx) }
+	if !IsEnabled() {
+		return ctx, trace.SpanFromContext(ctx)
+	}
 	return getTracer().Start(ctx, name, opts...)
 }
 
@@ -32,14 +34,22 @@ func EndSpan(span trace.Span, err error) {
 
 // SetAttr sets a single attribute on a span.
 func SetAttr(span trace.Span, key string, value interface{}) {
-	if span == nil { return }
+	if span == nil {
+		return
+	}
 	switch v := value.(type) {
-	case string:  span.SetAttributes(attribute.String(key, v))
-	case int:     span.SetAttributes(attribute.Int64(key, int64(v)))
-	case int64:   span.SetAttributes(attribute.Int64(key, v))
-	case bool:    span.SetAttributes(attribute.Bool(key, v))
-	case float64: span.SetAttributes(attribute.Float64(key, v))
-	default:      span.SetAttributes(attribute.String(key, ""))
+	case string:
+		span.SetAttributes(attribute.String(key, v))
+	case int:
+		span.SetAttributes(attribute.Int64(key, int64(v)))
+	case int64:
+		span.SetAttributes(attribute.Int64(key, v))
+	case bool:
+		span.SetAttributes(attribute.Bool(key, v))
+	case float64:
+		span.SetAttributes(attribute.Float64(key, v))
+	default:
+		span.SetAttributes(attribute.String(key, ""))
 	}
 }
 
@@ -51,7 +61,9 @@ func StartToolSpan(ctx context.Context, toolName string) (context.Context, trace
 
 // RecordToolResult sets the outcome of a tool execution on the span.
 func RecordToolResult(span trace.Span, toolName string, durationMs int64, err error) {
-	if span == nil { return }
+	if span == nil {
+		return
+	}
 	SetAttr(span, "tool.duration_ms", durationMs)
 	if err != nil {
 		SetAttr(span, "tool.status", "error")

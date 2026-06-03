@@ -24,5 +24,5 @@ func NewBuiltin(t Tool, fn func(args map[string]any) (string, error)) *BuiltinTo
 	return &BuiltinToolProvider{tool: t, fn: fn}
 }
 
-func (b *BuiltinToolProvider) Tool() Tool       { return b.tool }
+func (b *BuiltinToolProvider) Tool() Tool                                  { return b.tool }
 func (b *BuiltinToolProvider) Execute(args map[string]any) (string, error) { return b.fn(args) }

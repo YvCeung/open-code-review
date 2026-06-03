@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	w   io.Writer = os.Stdout
-	mu  sync.RWMutex
+	w  io.Writer = os.Stdout
+	mu sync.RWMutex
 )
 
 // Writer returns the current stdout writer (real stdout or discard).

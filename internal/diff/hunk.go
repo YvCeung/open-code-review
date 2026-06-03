@@ -11,8 +11,8 @@ type HunkLineType int
 
 const (
 	HunkContext HunkLineType = iota // ' ' prefix: unchanged context line
-	HunkAdded                     // '+' prefix: added line
-	HunkDeleted                   // '-' prefix: removed line
+	HunkAdded                       // '+' prefix: added line
+	HunkDeleted                     // '-' prefix: removed line
 )
 
 // HunkLine is a single line within a hunk.

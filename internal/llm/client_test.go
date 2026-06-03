@@ -6,7 +6,7 @@ import (
 
 func TestNewOpenAIClient_URLNormalization(t *testing.T) {
 	tests := []struct {
-		name    string
+		name     string
 		inputURL string
 		wantURL  string
 	}{

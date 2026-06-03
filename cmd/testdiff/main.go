@@ -56,14 +56,14 @@ func main() {
 // ---- argument parsing ----
 
 type cliArgs struct {
-	repo    string
-	from    string
-	to      string
-	commit  string
-	format  string // "text" or "json"
-	summary bool   // just print file list and stats
+	repo     string
+	from     string
+	to       string
+	commit   string
+	format   string // "text" or "json"
+	summary  bool   // just print file list and stats
 	showHelp bool
-	raw     []string
+	raw      []string
 }
 
 func parseArgs(args []string) cliArgs {
@@ -74,15 +74,20 @@ func parseArgs(args []string) cliArgs {
 			result.showHelp = true
 			return result
 		case "-repo":
-			i++; result.repo = args[i]
+			i++
+			result.repo = args[i]
 		case "-from":
-			i++; result.from = args[i]
+			i++
+			result.from = args[i]
 		case "-to":
-			i++; result.to = args[i]
+			i++
+			result.to = args[i]
 		case "-commit":
-			i++; result.commit = args[i]
+			i++
+			result.commit = args[i]
 		case "-format":
-			i++; result.format = args[i]
+			i++
+			result.format = args[i]
 		case "-summary":
 			result.summary = true
 		}

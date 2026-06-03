@@ -12,14 +12,14 @@ import (
 // Metric handles — initialized once on first use.
 var (
 	initMetricsOnce    bool
-	mReviewDuration      metric.Int64Histogram
-	mFilesReviewed       metric.Int64Counter
-	mCommentsGenerated   metric.Int64Counter
-	mLLMRequests         metric.Int64Counter
-	mLLMTokens           metric.Int64Counter
-	mLLMDuration         metric.Float64Histogram
-	mToolCalls           metric.Int64Counter
-	mToolExecutionTime   metric.Float64Histogram
+	mReviewDuration    metric.Int64Histogram
+	mFilesReviewed     metric.Int64Counter
+	mCommentsGenerated metric.Int64Counter
+	mLLMRequests       metric.Int64Counter
+	mLLMTokens         metric.Int64Counter
+	mLLMDuration       metric.Float64Histogram
+	mToolCalls         metric.Int64Counter
+	mToolExecutionTime metric.Float64Histogram
 )
 
 func getMeter() metric.Meter {
@@ -70,31 +70,49 @@ func ensureMetrics() {
 func checkMetricErr(err error) {}
 
 func RecordReviewDuration(ctx context.Context, dur time.Duration) {
-	if !IsEnabled() { return }
+	if !IsEnabled() {
+		return
+	}
 	ensureMetrics()
-	if mReviewDuration != nil { mReviewDuration.Record(ctx, int64(dur.Seconds())) }
+	if mReviewDuration != nil {
+		mReviewDuration.Record(ctx, int64(dur.Seconds()))
+	}
 }
 
 func RecordFilesReviewed(ctx context.Context, n int64) {
-	if !IsEnabled() { return }
+	if !IsEnabled() {
+		return
+	}
 	ensureMetrics()
-	if mFilesReviewed != nil { mFilesReviewed.Add(ctx, n) }
+	if mFilesReviewed != nil {
+		mFilesReviewed.Add(ctx, n)
+	}
 }
 
 func RecordCommentsGenerated(ctx context.Context, n int64) {
-	if !IsEnabled() { return }
+	if !IsEnabled() {
+		return
+	}
 	ensureMetrics()
-	if mCommentsGenerated != nil { mCommentsGenerated.Add(ctx, n) }
+	if mCommentsGenerated != nil {
+		mCommentsGenerated.Add(ctx, n)
+	}
 }
 
 func RecordLLMRequest(ctx context.Context, model string, dur time.Duration, totalTokens int64, status string) {
-	if !IsEnabled() { return }
+	if !IsEnabled() {
+		return
+	}
 	ensureMetrics()
 
 	attrs := []attribute.KeyValue{attribute.String("model", model), attribute.String("status", status)}
 
-	if mLLMRequests != nil { mLLMRequests.Add(ctx, 1, metric.WithAttributes(attrs...)) }
-	if mLLMDuration != nil { mLLMDuration.Record(ctx, dur.Seconds(), metric.WithAttributes(attribute.String("model", model))) }
+	if mLLMRequests != nil {
+		mLLMRequests.Add(ctx, 1, metric.WithAttributes(attrs...))
+	}
+	if mLLMDuration != nil {
+		mLLMDuration.Record(ctx, dur.Seconds(), metric.WithAttributes(attribute.String("model", model)))
+	}
 
 	if mLLMTokens != nil && totalTokens > 0 {
 		mLLMTokens.Add(ctx, totalTokens, metric.WithAttributes(attribute.String("type", "total"), attribute.String("model", model)))
@@ -102,13 +120,21 @@ func RecordLLMRequest(ctx context.Context, model string, dur time.Duration, tota
 }
 
 func RecordToolCall(ctx context.Context, name string, dur time.Duration, ok bool) {
-	if !IsEnabled() { return }
+	if !IsEnabled() {
+		return
+	}
 	ensureMetrics()
 
 	status := "ok"
-	if !ok { status = "error" }
+	if !ok {
+		status = "error"
+	}
 	attrs := []attribute.KeyValue{attribute.String("tool.name", name), attribute.String("status", status)}
 
-	if mToolCalls != nil { mToolCalls.Add(ctx, 1, metric.WithAttributes(attrs...)) }
-	if mToolExecutionTime != nil { mToolExecutionTime.Record(ctx, dur.Seconds(), metric.WithAttributes(attribute.String("tool.name", name))) }
+	if mToolCalls != nil {
+		mToolCalls.Add(ctx, 1, metric.WithAttributes(attrs...))
+	}
+	if mToolExecutionTime != nil {
+		mToolExecutionTime.Record(ctx, dur.Seconds(), metric.WithAttributes(attribute.String("tool.name", name)))
+	}
 }

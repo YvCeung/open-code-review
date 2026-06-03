@@ -8,13 +8,13 @@ type Tool struct {
 }
 
 var (
-	Unknown    = Tool{name: "unknown"}
-	TaskDone   = Tool{name: "task_done"}
-	CodeComment = Tool{name: "code_comment"}
-	FileRead   = Tool{name: "file_read"}
-	FileFind   = Tool{name: "file_find"}
+	Unknown      = Tool{name: "unknown"}
+	TaskDone     = Tool{name: "task_done"}
+	CodeComment  = Tool{name: "code_comment"}
+	FileRead     = Tool{name: "file_read"}
+	FileFind     = Tool{name: "file_find"}
 	FileReadDiff = Tool{name: "file_read_diff"}
-	CodeSearch  = Tool{name: "code_search"}
+	CodeSearch   = Tool{name: "code_search"}
 )
 
 func OfName(name string) Tool {
@@ -40,8 +40,8 @@ func (t Tool) IsKnown() bool {
 
 // LookupResult holds the result of a single tool lookup.
 type LookupResult struct {
-	Result     string
-	Found      bool
+	Result string
+	Found  bool
 }
 
 // Provider is the interface that all concrete tool implementations satisfy.

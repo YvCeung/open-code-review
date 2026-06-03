@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	stdoutmetric "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	stdouttrace "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	otlpmetricgrpc "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	otlptracegrpc "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	stdoutmetric "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	stdouttrace "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 )
 
 // newStdoutTraceExporter creates a console trace exporter with pretty-print output.

@@ -15,9 +15,9 @@ type UsageInfo struct {
 }
 
 var promptTokensPaths = []string{
-	"usage.prompt_tokens",        // OpenAI standard
-	"prompt_tokens",              // flat at root
-	"data.usage.prompt_tokens",   // wrapped in data layer
+	"usage.prompt_tokens",      // OpenAI standard
+	"prompt_tokens",            // flat at root
+	"data.usage.prompt_tokens", // wrapped in data layer
 }
 
 var completionTokensPaths = []string{
@@ -27,15 +27,15 @@ var completionTokensPaths = []string{
 }
 
 var cacheReadTokensPaths = []string{
-	"usage.cache_read_input_tokens",   // Anthropic
-	"cache_read_input_tokens",          // flat at root
+	"usage.cache_read_input_tokens",                // Anthropic
+	"cache_read_input_tokens",                      // flat at root
 	"usage.prompt_tokens_details.cache_tokens_hit", // some providers
 	"usage.prompt_tokens_details.cache_tokens",     // some providers
 }
 
 var cacheWriteTokensPaths = []string{
-	"usage.cache_creation_input_tokens",   // Anthropic / proxy
-	"cache_creation_input_tokens",          // flat at root
+	"usage.cache_creation_input_tokens", // Anthropic / proxy
+	"cache_creation_input_tokens",       // flat at root
 }
 
 // totalTokensPaths is an ordered list of JSON paths to try when extracting

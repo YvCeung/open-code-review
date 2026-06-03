@@ -82,13 +82,13 @@ func TestBuildAllowedHosts(t *testing.T) {
 
 func TestSplitBindHost(t *testing.T) {
 	cases := map[string]string{
-		"":                "",
-		":5483":           "",
-		"localhost:5483":  "localhost",
-		"127.0.0.1:5483":  "127.0.0.1",
-		"[::1]:5483":      "::1",
-		"0.0.0.0:5483":    "0.0.0.0",
-		"192.168.1.10":    "192.168.1.10",
+		"":               "",
+		":5483":          "",
+		"localhost:5483": "localhost",
+		"127.0.0.1:5483": "127.0.0.1",
+		"[::1]:5483":     "::1",
+		"0.0.0.0:5483":   "0.0.0.0",
+		"192.168.1.10":   "192.168.1.10",
 	}
 	for in, want := range cases {
 		if got := splitBindHost(in); got != want {
@@ -104,12 +104,12 @@ func TestHostGuard(t *testing.T) {
 	})
 
 	cases := []struct {
-		name      string
-		bindAddr  string
-		envVal    string
-		hostHdr   string
-		wantCode  int
-		wantLeak  bool
+		name     string
+		bindAddr string
+		envVal   string
+		hostHdr  string
+		wantCode int
+		wantLeak bool
 	}{
 		// Loopback always allowed
 		{"loopback-localhost", "localhost:5483", "", "localhost:5483", 200, true},

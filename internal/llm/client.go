@@ -55,10 +55,10 @@ type Message struct {
 // ContentBlock represents a single block within a multi-part message content.
 // Used by Claude's Messages API for tool results and multimodal content.
 type ContentBlock struct {
-	Type      string         `json:"type"`                          // "text" or "tool_result"
-	Text      string         `json:"text,omitempty"`                // for type="text"
-	ToolUseID string         `json:"tool_use_id,omitempty"`         // for type="tool_result"
-	Content   []ContentBlock `json:"content,omitempty"`             // nested text blocks inside tool_result
+	Type      string         `json:"type"`                  // "text" or "tool_result"
+	Text      string         `json:"text,omitempty"`        // for type="text"
+	ToolUseID string         `json:"tool_use_id,omitempty"` // for type="tool_result"
+	Content   []ContentBlock `json:"content,omitempty"`     // nested text blocks inside tool_result
 }
 
 // NewTextMessage creates a message with simple string content.
@@ -605,13 +605,13 @@ func (c *AnthropicClient) StreamCompletion(req ChatRequest, cb func(chunk []byte
 
 // anthropicRequest is the request body for Anthropic Messages API.
 type anthropicRequest struct {
-	Model         string          `json:"model"`
-	MaxTokens     int             `json:"max_tokens"`
-	System        string          `json:"system,omitempty"`
-	Messages      []anthroMessage `json:"messages"`
-	Tools         []anthroTool    `json:"tools,omitempty"`
-	Stream        bool            `json:"stream,omitempty"`
-	Temperature   *float64        `json:"temperature,omitempty"`
+	Model       string          `json:"model"`
+	MaxTokens   int             `json:"max_tokens"`
+	System      string          `json:"system,omitempty"`
+	Messages    []anthroMessage `json:"messages"`
+	Tools       []anthroTool    `json:"tools,omitempty"`
+	Stream      bool            `json:"stream,omitempty"`
+	Temperature *float64        `json:"temperature,omitempty"`
 }
 
 type anthroMessage struct {
@@ -621,10 +621,10 @@ type anthroMessage struct {
 
 // anthropicToolUseBlock represents a tool_use content block in Anthropic's Messages API.
 type anthropicToolUseBlock struct {
-	Type  string         `json:"type"`   // "tool_use"
-	ID    string         `json:"id"`     // tool use ID
-	Name  string         `json:"name"`   // function name
-	Input map[string]any `json:"input"`  // function arguments (parsed as object)
+	Type  string         `json:"type"`  // "tool_use"
+	ID    string         `json:"id"`    // tool use ID
+	Name  string         `json:"name"`  // function name
+	Input map[string]any `json:"input"` // function arguments (parsed as object)
 }
 
 type anthroTool struct {
@@ -822,13 +822,13 @@ func (c *AnthropicClient) parseResponse(body []byte, headers http.Header) (*Chat
 	}
 
 	var resp struct {
-		ID         string              `json:"id"`
-		Model      string              `json:"model"`
-		Type       string              `json:"type"`
-		Role       string              `json:"role"`
-		Content    []contentBlockResp  `json:"content"`
-		Usage      anthropicUsageRaw   `json:"usage"`
-		StopReason string              `json:"stop_reason,omitempty"`
+		ID         string             `json:"id"`
+		Model      string             `json:"model"`
+		Type       string             `json:"type"`
+		Role       string             `json:"role"`
+		Content    []contentBlockResp `json:"content"`
+		Usage      anthropicUsageRaw  `json:"usage"`
+		StopReason string             `json:"stop_reason,omitempty"`
 	}
 
 	if err := json.Unmarshal(body, &resp); err != nil {
