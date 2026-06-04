@@ -48,6 +48,12 @@ func runReview(args []string) error {
 		return fmt.Errorf("resolve repo: %w", err)
 	}
 
+	if opts.commit != "" && opts.background == "" {
+		if msg, err := getCommitMessage(repoDir, opts.commit); err == nil && msg != "" {
+			opts.background = msg
+		}
+	}
+
 	resolver, fileFilter, err := rules.NewResolver(repoDir, opts.rulePath)
 	if err != nil {
 		return fmt.Errorf("load rules: %w", err)
