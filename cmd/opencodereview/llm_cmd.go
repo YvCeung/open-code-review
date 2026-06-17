@@ -72,7 +72,7 @@ func runLLMTest() error {
 		return llmClient.CompletionsWithCtx(ctx, llm.ChatRequest{
 			Model:     ep.Model,
 			Messages:  messages,
-			MaxTokens: 256,
+			MaxTokens: 2048,
 		})
 	}()
 	if err != nil {
@@ -86,7 +86,13 @@ func runLLMTest() error {
 	fmt.Printf("Source: %s\n", ep.Source)
 	fmt.Printf("URL:    %s\n", ep.URL)
 	fmt.Printf("Model:  %s\n", model)
-	fmt.Printf("%s\n", resp.Content())
+
+	content := resp.Content()
+	if content == "" {
+		content = "(empty response)"
+	}
+	fmt.Printf("%s\n", content)
+	fmt.Println("✓ Connection test successful")
 	return nil
 }
 
