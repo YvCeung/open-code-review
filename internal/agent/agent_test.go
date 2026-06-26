@@ -1,14 +1,87 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
+	"github.com/open-code-review/open-code-review/internal/config/template"
 	"github.com/open-code-review/open-code-review/internal/config/toolsconfig"
 	"github.com/open-code-review/open-code-review/internal/llm"
 	"github.com/open-code-review/open-code-review/internal/model"
+	"github.com/open-code-review/open-code-review/internal/tool"
 )
+
+type fakeAgentClient struct {
+	responses []*llm.ChatResponse
+	calls     int
+}
+
+func (f *fakeAgentClient) CompletionsWithCtx(_ context.Context, _ llm.ChatRequest) (*llm.ChatResponse, error) {
+	if f.calls >= len(f.responses) {
+		content := ""
+		return &llm.ChatResponse{
+			Choices: []llm.Choice{{Message: llm.ResponseMessage{Content: &content}}},
+			Model:   "fake",
+		}, nil
+	}
+	resp := f.responses[f.calls]
+	f.calls++
+	return resp, nil
+}
+
+func agentTaskDoneResponse() *llm.ChatResponse {
+	content := ""
+	return &llm.ChatResponse{
+		Choices: []llm.Choice{{
+			Message: llm.ResponseMessage{
+				Content: &content,
+				ToolCalls: []llm.ToolCall{{
+					ID:   "call_done",
+					Type: "function",
+					Function: llm.FunctionCall{
+						Name:      "task_done",
+						Arguments: `{}`,
+					},
+				}},
+			},
+		}},
+		Model: "fake",
+		Usage: &llm.UsageInfo{PromptTokens: 10, CompletionTokens: 5},
+	}
+}
+
+func codeCommentResponse(path string) *llm.ChatResponse {
+	content := ""
+	args := map[string]any{
+		"path": path,
+		"comments": []any{
+			map[string]any{
+				"content":       "potential null pointer",
+				"existing_code": "foo := bar.Baz()",
+			},
+		},
+	}
+	argsJSON, _ := json.Marshal(args)
+	return &llm.ChatResponse{
+		Choices: []llm.Choice{{
+			Message: llm.ResponseMessage{
+				Content: &content,
+				ToolCalls: []llm.ToolCall{{
+					ID:   "call_comment",
+					Type: "function",
+					Function: llm.FunctionCall{
+						Name:      "code_comment",
+						Arguments: string(argsJSON),
+					},
+				}},
+			},
+		}},
+		Model: "fake",
+		Usage: &llm.UsageInfo{PromptTokens: 50, CompletionTokens: 20},
+	}
+}
 
 func TestBuildFilterCommentsJSON(t *testing.T) {
 	tests := []struct {
@@ -301,4 +374,196 @@ func TestBuildToolDefs(t *testing.T) {
 			t.Errorf("expected nil, got %v", defs)
 		}
 	})
+}
+
+func TestFilterLargeDiffs(t *testing.T) {
+	a := New(Args{
+		Template: template.Template{MaxTokens: 100},
+	})
+
+	diffs := []model.Diff{
+		{NewPath: "small.go", Diff: "short diff"},
+		{NewPath: "large.go", Diff: strings.Repeat("word ", 500)},
+	}
+
+	kept := a.filterLargeDiffs(diffs)
+	if len(kept) != 1 {
+		t.Fatalf("expected 1 kept diff, got %d", len(kept))
+	}
+	if kept[0].NewPath != "small.go" {
+		t.Errorf("kept wrong file: %s", kept[0].NewPath)
+	}
+}
+
+func TestFilterLargeDiffs_ZeroMaxTokens(t *testing.T) {
+	a := New(Args{
+		Template: template.Template{MaxTokens: 0},
+	})
+
+	diffs := []model.Diff{{NewPath: "a.go", Diff: "some diff"}}
+	kept := a.filterLargeDiffs(diffs)
+	if len(kept) != 1 {
+		t.Errorf("expected all kept when MaxTokens=0, got %d", len(kept))
+	}
+}
+
+func TestCountReviewable(t *testing.T) {
+	a := New(Args{})
+	diffs := []model.Diff{
+		{NewPath: "main.go", Insertions: 10, Deletions: 2},
+		{NewPath: "deleted.go", IsDeleted: true, Deletions: 20},
+		{NewPath: "binary.bin", IsBinary: true},
+		{NewPath: "helper.go", Insertions: 5},
+	}
+
+	count := a.countReviewable(diffs)
+	if count != 2 {
+		t.Errorf("countReviewable = %d, want 2", count)
+	}
+}
+
+func TestBuildChangeFilesExcept(t *testing.T) {
+	a := New(Args{})
+	a.diffs = []model.Diff{
+		{NewPath: "main.go", OldPath: "main.go"},
+		{NewPath: "helper.go", OldPath: "helper.go", IsNew: true},
+		{NewPath: "removed.go", OldPath: "removed.go", IsDeleted: true},
+		{NewPath: "renamed.go", OldPath: "old_name.go"},
+		{NewPath: "bin.dat", OldPath: "bin.dat", IsBinary: true},
+	}
+
+	got := a.buildChangeFilesExcept("main.go")
+	if strings.Contains(got, "main.go") {
+		t.Error("excluded file should not appear")
+	}
+	if !strings.Contains(got, "ADDED") {
+		t.Error("expected ADDED status for new file")
+	}
+	if !strings.Contains(got, "DELETED") {
+		t.Error("expected DELETED status")
+	}
+	if !strings.Contains(got, "RENAMED") {
+		t.Error("expected RENAMED status")
+	}
+	if strings.Contains(got, "bin.dat") {
+		t.Error("binary files should be skipped")
+	}
+}
+
+func TestDispatchSubtasks_WithFakeLLM(t *testing.T) {
+	client := &fakeAgentClient{responses: []*llm.ChatResponse{
+		codeCommentResponse("main.go"),
+		agentTaskDoneResponse(),
+	}}
+
+	collector := tool.NewCommentCollector()
+	reg := tool.NewRegistry()
+	reg.Register(&tool.CodeCommentProvider{Collector: collector})
+
+	a := New(Args{
+		LLMClient:        client,
+		Model:            "fake",
+		CommentCollector: collector,
+		Tools:            reg,
+		Template: template.Template{
+			MaxTokens:           100000,
+			MaxToolRequestTimes: 10,
+			MainTask: template.LlmConversation{
+				Messages: []template.ChatMessage{
+					{Role: "user", Content: "Review {{diff}} for {{current_file_path}}"},
+				},
+			},
+		},
+		MainToolDefs: []llm.ToolDef{
+			{Type: "function", Function: llm.FunctionDef{Name: "task_done", Description: "done"}},
+			{Type: "function", Function: llm.FunctionDef{Name: "code_comment", Description: "comment"}},
+		},
+	})
+
+	a.diffs = []model.Diff{
+		{NewPath: "main.go", OldPath: "main.go", Diff: "+new line", Insertions: 1},
+	}
+	a.currentDate = "2025-06-26 10:00"
+
+	comments, err := a.dispatchSubtasks(context.Background())
+	if err != nil {
+		t.Fatalf("dispatchSubtasks: %v", err)
+	}
+	if len(comments) != 1 {
+		t.Fatalf("expected 1 comment, got %d", len(comments))
+	}
+	if comments[0].Path != "main.go" {
+		t.Errorf("Path = %q, want main.go", comments[0].Path)
+	}
+	if !strings.Contains(comments[0].Content, "null pointer") {
+		t.Errorf("Content = %q", comments[0].Content)
+	}
+}
+
+func TestDispatchSubtasks_AllDeleted(t *testing.T) {
+	client := &fakeAgentClient{}
+	a := New(Args{
+		LLMClient: client,
+		Model:     "fake",
+		Template: template.Template{
+			MaxTokens:           100000,
+			MaxToolRequestTimes: 5,
+			MainTask: template.LlmConversation{
+				Messages: []template.ChatMessage{
+					{Role: "user", Content: "Review {{diff}}"},
+				},
+			},
+		},
+	})
+
+	a.diffs = []model.Diff{
+		{NewPath: "removed.go", IsDeleted: true},
+	}
+	a.currentDate = "2025-06-26 10:00"
+
+	comments, err := a.dispatchSubtasks(context.Background())
+	if err != nil {
+		t.Fatalf("dispatchSubtasks: %v", err)
+	}
+	if len(comments) != 0 {
+		t.Errorf("expected 0 comments for deleted file, got %d", len(comments))
+	}
+	if client.calls != 0 {
+		t.Errorf("expected 0 LLM calls, got %d", client.calls)
+	}
+}
+
+func TestAgent_TokenAccumulation(t *testing.T) {
+	client := &fakeAgentClient{responses: []*llm.ChatResponse{
+		agentTaskDoneResponse(),
+	}}
+
+	a := New(Args{
+		LLMClient: client,
+		Model:     "fake",
+		Template: template.Template{
+			MaxTokens:           100000,
+			MaxToolRequestTimes: 10,
+			MainTask: template.LlmConversation{
+				Messages: []template.ChatMessage{
+					{Role: "user", Content: "Review {{diff}}"},
+				},
+			},
+		},
+	})
+	a.diffs = []model.Diff{
+		{NewPath: "a.go", Diff: "+x", Insertions: 1},
+	}
+	a.currentDate = "2025-06-26 10:00"
+
+	_, err := a.dispatchSubtasks(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.TotalInputTokens() != 10 {
+		t.Errorf("TotalInputTokens = %d, want 10", a.TotalInputTokens())
+	}
+	if a.TotalOutputTokens() != 5 {
+		t.Errorf("TotalOutputTokens = %d, want 5", a.TotalOutputTokens())
+	}
 }
