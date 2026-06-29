@@ -83,6 +83,7 @@ const HighlightsSection: React.FC = () => {
 
   return (
     <section
+      id="highlights"
       ref={sectionRef}
       style={{
         width: '100%',
